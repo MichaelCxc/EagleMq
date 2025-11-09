@@ -1,0 +1,86 @@
+package org.idea.eaglemq.broker.utils;
+
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+
+/**
+ * Support MMapApi to access files in disk based on Java  ---done!
+ * Support target offset MMap (结束银蛇的offset-开始银蛇的offset=银蛇的内存体积)
+ * Read from target offset
+ * Write from target offset
+ *
+ *
+ */
+
+public class MMapUtil {
+    private File file;
+    //private int mappedSize;
+    private MappedByteBuffer mappedByteBuffer;
+    private FileChannel fileChannel;
+
+
+    /**
+     * FIle MMap from target offset
+     *
+     * @param filePath  filepath
+     * @param startOffset
+     * @param mappedSize
+     */
+    public void loadFileInMMap(String filePath, int startOffset, int mappedSize) throws IOException {
+        this.file = new File(filePath);
+        if(!file.exists()){
+            throw new FileNotFoundException("filePath is " + filePath + " invalid");
+        }
+        this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
+        this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, startOffset, mappedSize);
+    }
+
+    /**
+     *
+     * @param readOffset
+     * @param size
+     * @return
+     */
+    public byte[] readContect(int readOffset, int size){
+        mappedByteBuffer.position(readOffset);
+        byte[] content = new byte[size];
+        int j = 0;
+        for(int i = 0; i < size;i++){
+            //Read from local cache
+            byte b = mappedByteBuffer.get(readOffset+i);
+            content[j++] = b;
+        }
+        return content;
+    }
+
+    /**
+     *
+     * @param content
+     */
+    public void writeContent(byte[] content){
+        this.writeContent(content,false);
+    }
+
+    /**
+     * Write to disk
+     * @param content
+     * @param force
+     */
+    public void writeContent(byte[] content, boolean force){
+        // Default write to page cache
+        // If hope to flush to disk, we need to adjust
+        mappedByteBuffer.put(content);
+        if(force){
+            mappedByteBuffer.force();
+        }
+    }
+
+    public void clear(){
+        mappedByteBuffer.clear();
+    }
+}
