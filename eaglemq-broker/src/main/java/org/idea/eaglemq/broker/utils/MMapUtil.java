@@ -1,12 +1,21 @@
 package org.idea.eaglemq.broker.utils;
 
 
+import io.netty.buffer.ByteBuf;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Support MMapApi to access files in disk based on Java  ---done!
@@ -46,7 +55,7 @@ public class MMapUtil {
      * @param size
      * @return
      */
-    public byte[] readContect(int readOffset, int size){
+    public byte[] readContent(int readOffset, int size){
         mappedByteBuffer.position(readOffset);
         byte[] content = new byte[size];
         int j = 0;
@@ -82,5 +91,51 @@ public class MMapUtil {
 
     public void clear(){
         mappedByteBuffer.clear();
+    }
+
+    public void clean(){
+        if(mappedByteBuffer == null || !mappedByteBuffer.isDirect() || mappedByteBuffer.capacity() == 0)
+            return;
+
+        invoke(invoke(viewed(mappedByteBuffer), "cleaner"), "clean");
+    }
+
+    private Object invoke(final Object target, final String methodName, final Class<?>...args){
+        return AccessController.doPrivileged(new PrivilegedAction<Object>() {
+           public Object run(){
+               try{
+                   Method method = method(target, methodName, args);
+                   method.setAccessible(true);
+                   return method.invoke(target);
+               }catch (Exception e){
+                   throw new IllegalStateException(e);
+               }
+           }
+        });
+    }
+
+    private Method method(Object target, String methodName, Class<?>[] args) throws NoSuchMethodException{
+        try {
+            return target.getClass().getMethod(methodName, args);
+        }catch (NoSuchMethodException e){
+            return target.getClass().getDeclaredMethod(methodName,args);
+        }
+    }
+
+    private ByteBuffer viewed(ByteBuffer buffer){
+        String methodName = "viewedBuffer";
+        Method[] methods = buffer.getClass().getMethods();
+        for(int i = 0; i < methods.length; i++){
+            if(methods[i].getName().equals("attachment")){
+                methodName = "attachment";
+                break;
+            }
+        }
+
+        ByteBuffer viewedBuffer = (ByteBuffer) invoke(buffer, methodName);
+        if(viewedBuffer == null)
+            return buffer;
+        else
+            return viewed(viewedBuffer);
     }
 }
