@@ -8,7 +8,7 @@ public class GlobalPropertiesLoader {
 
     public void loadProperties(){
         GlobalProperties globalProperties = new GlobalProperties();
-        String eagleMqHome = System.getProperty(BrokerConstants.EAGLE_MQ_HOME);
+        String eagleMqHome = System.getenv(BrokerConstants.EAGLE_MQ_HOME);
 
         if(StringUtil.isNullOrEmpty(eagleMqHome)){
             throw new IllegalArgumentException("EAGLE_MQ_HOME is null");

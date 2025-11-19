@@ -11,7 +11,7 @@ public class TopicInfoLoader {
         GlobalProperties globalProperties = CommonCache.getGlobalProperties();
         String basePath = globalProperties.getEagleMqHome();
         if(StringUtil.isNullOrEmpty(basePath)){
-            throws new IllegalArgumentException("EAGLE_MQ_HOME is invalid.");
+            throw new IllegalArgumentException("EAGLE_MQ_HOME is invalid.");
         }
         String topicJsonFilePath = basePath + "/broker/config/eaglemq-topic.json";
         topicInfo = new TopicInfo();
