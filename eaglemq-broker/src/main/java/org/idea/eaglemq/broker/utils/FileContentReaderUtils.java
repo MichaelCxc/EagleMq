@@ -26,6 +26,7 @@ public class FileContentReaderUtils {
     public static void main(String[] args) {
         String content = FileContentReaderUtils.readFromFile("F:\\Java\\eaglemq\\broker\\config\\eaglemq-topic.json");
         System.out.println(content);
-        List<EagleMqTopicModel> parseArray(content, EagleMqTopicModel.class);
+        List<EagleMqTopicModel> eagleMqTopicModelList = parseArray(content, EagleMqTopicModel.class);
+        System.out.println(eagleMqTopicModelList);
     }
 }

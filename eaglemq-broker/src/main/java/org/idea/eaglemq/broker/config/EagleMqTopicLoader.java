@@ -1,11 +1,18 @@
 package org.idea.eaglemq.broker.config;
 
+import com.alibaba.fastjson2.JSON;
 import io.netty.util.internal.StringUtil;
 import org.idea.eaglemq.broker.cache.CommonCache;
+import org.idea.eaglemq.broker.model.EagleMqTopicModel;
+import org.idea.eaglemq.broker.utils.FileContentReaderUtils;
 
-public class TopicInfoLoader {
+import java.util.List;
 
-    private TopicInfo topicInfo;
+import static com.alibaba.fastjson2.JSON.parseArray;
+
+public class EagleMqTopicLoader {
+
+
 
     public void loadProperties(){
         GlobalProperties globalProperties = CommonCache.getGlobalProperties();
@@ -14,7 +21,10 @@ public class TopicInfoLoader {
             throw new IllegalArgumentException("EAGLE_MQ_HOME is invalid.");
         }
         String topicJsonFilePath = basePath + "/broker/config/eaglemq-topic.json";
-        topicInfo = new TopicInfo();
+
+        String fileContent = FileContentReaderUtils.readFromFile(topicJsonFilePath);
+        List<EagleMqTopicModel> eagleMqTopicModelList = JSON.parseArray(fileContent, EagleMqTopicModel.class);
+        CommonCache.setEagleMqTopicModelList(eagleMqTopicModelList);
 
     }
 }

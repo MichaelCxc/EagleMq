@@ -5,7 +5,7 @@ public class QueueModel {
     private Integer id;
     private Long minOffset;
     private Long maxOffset;
-    private Long currentOffset
+    private Long currentOffset;
 
     public Integer getId() {
         return id;

@@ -1,12 +1,15 @@
 package org.idea.eaglemq.broker.cache;
 
 import org.idea.eaglemq.broker.config.GlobalProperties;
-import org.idea.eaglemq.broker.config.TopicInfo;
+import org.idea.eaglemq.broker.model.EagleMqTopicModel;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class CommonCache {
 
     public static GlobalProperties globalProperties = new GlobalProperties();
-    public static TopicInfo topicInfo = new TopicInfo();
+    public static List<EagleMqTopicModel> eagleMqTopicModelList = new ArrayList<>();
 
     public static GlobalProperties getGlobalProperties() {
         return globalProperties;
@@ -16,11 +19,11 @@ public class CommonCache {
         CommonCache.globalProperties = globalProperties;
     }
 
-    public static TopicInfo getTopicInfo() {
-        return topicInfo;
+    public static List<EagleMqTopicModel> getEagleMqTopicModelList() {
+        return eagleMqTopicModelList;
     }
 
-    public static void setTopicInfo(TopicInfo topicInfo) {
-        CommonCache.topicInfo = topicInfo;
+    public static void setEagleMqTopicModelList(List<EagleMqTopicModel> eagleMqTopicModelList) {
+        CommonCache.eagleMqTopicModelList = eagleMqTopicModelList;
     }
 }

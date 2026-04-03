@@ -5,7 +5,7 @@ import java.util.List;
 public class EagleMqTopicModel {
     private String topic;
     private List<QueueModel> queueList;
-    private String createdAt;
+    private String createAt;
     private String updateAt;
 
     public String getTopic() {
@@ -24,12 +24,12 @@ public class EagleMqTopicModel {
         this.queueList = queueList;
     }
 
-    public String getCreatedAt() {
-        return createdAt;
+    public String getCreateAt() {
+        return createAt;
     }
 
-    public void setCreatedAt(String createdAt) {
-        this.createdAt = createdAt;
+    public void setCreateAt(String createAt) {
+        this.createAt = createAt;
     }
 
     public String getUpdateAt() {
@@ -38,5 +38,15 @@ public class EagleMqTopicModel {
 
     public void setUpdateAt(String updateAt) {
         this.updateAt = updateAt;
+    }
+
+    @Override
+    public String toString() {
+        return "EagleMqTopicModel{" +
+                "topic='" + topic + '\'' +
+                ", queueList=" + queueList +
+                ", createAt=" + createAt +
+                ", updateAt=" + updateAt +
+                '}';
     }
 }
