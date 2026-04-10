@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Support MMapApi to access files in disk based on Java  ---done!
- * Support target offset MMap (结束银蛇的offset-开始银蛇的offset=银蛇的内存体积)
+ * Support target offset MMap (结束映射的offset-开始映射的offset=映射的内存体积)
  * Read from target offset
  * Write from target offset
  *

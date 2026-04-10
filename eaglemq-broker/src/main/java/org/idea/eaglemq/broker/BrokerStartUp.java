@@ -28,7 +28,7 @@ public class BrokerStartUp {
             String filePath = CommonCache.getGlobalProperties().getEagleMqHome()
                     + BrokerConstants.BASE_STORE_PATH
                     + topicName
-                    + "00000001";
+                    + "/00000001";
             messageAppendHandler.prepareMMapLoading(filePath, topicName);
         }
 
