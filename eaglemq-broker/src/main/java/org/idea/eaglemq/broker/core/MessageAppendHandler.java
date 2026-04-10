@@ -1,7 +1,6 @@
 package org.idea.eaglemq.broker.core;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 public class MessageAppendHandler {
 
@@ -27,7 +26,7 @@ public class MessageAppendHandler {
         if (mMapFileModel == null){
             throw new RuntimeException("topic is invalid!");
         }
-        byte[] content = mMapFileModel.readContent(0,20);
+        byte[] content = mMapFileModel.readContent(0,10);
         System.out.println(new String(content));
     }
 
