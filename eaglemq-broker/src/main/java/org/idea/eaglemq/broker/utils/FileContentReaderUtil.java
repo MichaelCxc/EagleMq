@@ -1,6 +1,5 @@
 package org.idea.eaglemq.broker.utils;
 
-import com.alibaba.fastjson2.JSON;
 import org.idea.eaglemq.broker.model.EagleMqTopicModel;
 
 import java.io.BufferedReader;
@@ -9,7 +8,7 @@ import java.util.List;
 
 import static com.alibaba.fastjson2.JSON.parseArray;
 
-public class FileContentReaderUtils {
+public class FileContentReaderUtil {
 
     public static String readFromFile(String path){
         try(BufferedReader in = new BufferedReader(new FileReader(path))) {
@@ -24,7 +23,7 @@ public class FileContentReaderUtils {
     }
 
     public static void main(String[] args) {
-        String content = FileContentReaderUtils.readFromFile("F:\\Java\\eaglemq\\broker\\config\\eaglemq-topic.json");
+        String content = FileContentReaderUtil.readFromFile("F:\\Java\\eaglemq\\broker\\config\\eaglemq-topic.json");
         System.out.println(content);
         List<EagleMqTopicModel> eagleMqTopicModelList = parseArray(content, EagleMqTopicModel.class);
         System.out.println(eagleMqTopicModelList);

@@ -4,6 +4,7 @@ import java.util.List;
 
 public class EagleMqTopicModel {
     private String topic;
+    private CommitLogModel commitLogModel;
     private List<QueueModel> queueList;
     private String createAt;
     private String updateAt;
@@ -40,13 +41,23 @@ public class EagleMqTopicModel {
         this.updateAt = updateAt;
     }
 
+    public CommitLogModel getCommitLogModel() {
+        return commitLogModel;
+    }
+
+    public void setCommitLogModel(CommitLogModel commitLogModel) {
+        this.commitLogModel = commitLogModel;
+    }
+
     @Override
     public String toString() {
         return "EagleMqTopicModel{" +
                 "topic='" + topic + '\'' +
+                ", commitLogfileName=" + commitLogModel.getFileName() +
+                ", commitLogOffset=" + commitLogModel.getOffset() +
                 ", queueList=" + queueList +
-                ", createAt=" + createAt +
-                ", updateAt=" + updateAt +
+                ", createAt='" + createAt + '\'' +
+                ", updateAt='" + updateAt + '\'' +
                 '}';
     }
 }

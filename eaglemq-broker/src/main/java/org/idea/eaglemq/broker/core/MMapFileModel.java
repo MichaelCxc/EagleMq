@@ -1,5 +1,11 @@
 package org.idea.eaglemq.broker.core;
 
+import org.idea.eaglemq.broker.cache.CommonCache;
+import org.idea.eaglemq.broker.constants.BrokerConstants;
+import org.idea.eaglemq.broker.model.CommitLogModel;
+import org.idea.eaglemq.broker.model.EagleMqTopicModel;
+import org.idea.eaglemq.broker.utils.CommitLogFileNameUtil;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -16,22 +22,63 @@ public class MMapFileModel {
     //private int mappedSize;
     private MappedByteBuffer mappedByteBuffer;
     private FileChannel fileChannel;
+    private String topic;
 
 
     /**
      * FIle MMap from target offset
      *
-     * @param filePath  filepath
+     * @param topicName     消息主题
      * @param startOffset
      * @param mappedSize
      */
-    public void loadFileInMMap(String filePath, int startOffset, int mappedSize) throws IOException {
+    public void loadFileInMMap(String topicName, int startOffset, int mappedSize) throws IOException {
+        String filePath = getLatestCommitLogFile(topicName);
         this.file = new File(filePath);
         if(!file.exists()){
             throw new FileNotFoundException("filePath is " + filePath + " invalid");
         }
         this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
         this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, startOffset, mappedSize);
+    }
+
+    /**
+     * Get latest commitlog file
+     * @param topicName
+     * @return
+     */
+    private String getLatestCommitLogFile(String topicName){
+        EagleMqTopicModel eagleMqTopicModel = CommonCache.getEagleMqTopicModelMap().get(topicName);
+        if(eagleMqTopicModel == null){
+            throw new IllegalArgumentException("Topic in inValid: topicName is "+ topicName);
+        }
+        CommitLogModel commitLogModel = eagleMqTopicModel.getCommitLogModel();
+        long diff = commitLogModel.getOffsetLimit() - commitLogModel.getOffset();
+        String filePath = null;
+        if(diff == 0){
+            filePath = this.createNewCommitLogFile(topicName,commitLogModel);
+        }else if(diff > 0){
+            filePath = CommonCache.getGlobalProperties().getEagleMqHome()
+                    + BrokerConstants.BASE_STORE_PATH
+                    + topicName
+                    + commitLogModel.getFileName();
+        }
+        return filePath;
+    }
+
+    private String createNewCommitLogFile(String topicName, CommitLogModel commitLogModel){
+        String newFileName = CommitLogFileNameUtil.incrCommitLogFileName(commitLogModel.getFileName());
+        String newFilePath = CommonCache.getGlobalProperties().getEagleMqHome()
+                + BrokerConstants.BASE_STORE_PATH
+                + topicName
+                + newFileName;
+        File newCommitLogFile = new File(newFilePath);
+        try {
+            newCommitLogFile.createNewFile();
+        }catch (IOException ex){
+            throw new RuntimeException(ex);
+        }
+        return newFilePath;
     }
 
     /**
@@ -63,11 +110,26 @@ public class MMapFileModel {
     /**
      * Write to disk
      * @param content
-     * @param force
      */
     public void writeContent(byte[] content, boolean force){
+        //定位到最新的commitLog文件中，记录下当前文件是否已经写满，如果写满，则创建新的文件
+        //并且做新的mmap映射，如果当前文件没有写满，对content内容做一层封装，再判断写入是否会导致commitlog写满
+        //如果不会，则选择当前commitLog,如果会则创建新文件，并且做mmap映射
+        //定位到最新的commitlog文件之后，写入
+        //定义一个对象，专门管理各个topic的最新写入offset值，并且定时刷新到磁盘中（mmap?)
+        //写入数据，offset变更，如果是高并发场景，offset是不是会被多个线程访问？
+
+        //offset会用一个原子类AtomicLong去管理
+        //线程安全问题： 线程1：111，线程2:122
+        //加锁机制（锁的选择非常重要）
+
         // Default write to page cache
         // If hope to flush to disk, we need to adjust
+//        MappedByteBuffer byteBuffer = mappedByteBuffer.slice();
+//        byteBuffer.position(111);
+//        byteBuffer.put(content);
+
+
         mappedByteBuffer.put(content);
         if(force){
             mappedByteBuffer.force();
