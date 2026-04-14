@@ -35,7 +35,7 @@ public class BrokerStartUp {
         initProperties();
         // Load property
         String topic = "order_cancel_topic";
-        commitLogAppendHandler.appendMsg(topic, "This is a test content.");
+        //commitLogAppendHandler.appendMsg(topic, "This is a test content.");
         commitLogAppendHandler.readMsg(topic);
         //Initializa
     }

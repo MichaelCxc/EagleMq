@@ -2,8 +2,10 @@ package org.idea.eaglemq.broker.core;
 
 import org.idea.eaglemq.broker.cache.CommonCache;
 import org.idea.eaglemq.broker.constants.BrokerConstants;
+import org.idea.eaglemq.broker.model.CommitLogMessageModel;
 import org.idea.eaglemq.broker.model.CommitLogModel;
 import org.idea.eaglemq.broker.model.EagleMqTopicModel;
+import org.idea.eaglemq.broker.utils.ByteConvertUtils;
 import org.idea.eaglemq.broker.utils.CommitLogFileNameUtil;
 
 import java.io.File;
@@ -34,10 +36,16 @@ public class MMapFileModel {
      */
     public void loadFileInMMap(String topicName, int startOffset, int mappedSize) throws IOException {
         String filePath = getLatestCommitLogFile(topicName);
+        this.topic = topicName;
+        this.doMMap(filePath,startOffset, mappedSize);
+    }
+
+    private void doMMap(String filePath,  int startOffset, int mappedSize) throws IOException {
         this.file = new File(filePath);
         if(!file.exists()){
             throw new FileNotFoundException("filePath is " + filePath + " invalid");
         }
+
         this.fileChannel = new RandomAccessFile(file, "rw").getChannel();
         this.mappedByteBuffer = fileChannel.map(FileChannel.MapMode.READ_WRITE, startOffset, mappedSize);
     }
@@ -101,17 +109,17 @@ public class MMapFileModel {
 
     /**
      *
-     * @param content
+     * @param commitLogMessageModel
      */
-    public void writeContent(byte[] content){
-        this.writeContent(content,false);
+    public void writeContent(CommitLogMessageModel commitLogMessageModel) throws IOException {
+        this.writeContent(commitLogMessageModel,false);
     }
 
     /**
      * Write to disk
-     * @param content
+     * @param commitLogMessageModel
      */
-    public void writeContent(byte[] content, boolean force){
+    public void writeContent(CommitLogMessageModel commitLogMessageModel, boolean force) throws IOException {
         //定位到最新的commitLog文件中，记录下当前文件是否已经写满，如果写满，则创建新的文件
         //并且做新的mmap映射，如果当前文件没有写满，对content内容做一层封装，再判断写入是否会导致commitlog写满
         //如果不会，则选择当前commitLog,如果会则创建新文件，并且做mmap映射
@@ -119,6 +127,7 @@ public class MMapFileModel {
         //定义一个对象，专门管理各个topic的最新写入offset值，并且定时刷新到磁盘中（mmap?)
         //写入数据，offset变更，如果是高并发场景，offset是不是会被多个线程访问？
 
+        this.checkCommitLogHasEnabledSpace(commitLogMessageModel);
         //offset会用一个原子类AtomicLong去管理
         //线程安全问题： 线程1：111，线程2:122
         //加锁机制（锁的选择非常重要）
@@ -130,9 +139,23 @@ public class MMapFileModel {
 //        byteBuffer.put(content);
 
 
-        mappedByteBuffer.put(content);
+
+        mappedByteBuffer.put(commitLogMessageModel.converToBytes());
         if(force){
+            //强制刷盘
             mappedByteBuffer.force();
+        }
+    }
+
+    private void checkCommitLogHasEnabledSpace(CommitLogMessageModel commitLogMessageModel) throws IOException {
+        EagleMqTopicModel eagleMqTopicModel = CommonCache.getEagleMqTopicModelMap().get(this.topic);
+        CommitLogModel commitLogModel = eagleMqTopicModel.getCommitLogModel();
+        long writeAbleOffsetNum = commitLogModel.getOffsetLimit() - commitLogModel.getOffset();
+        // Not enough space to write, need to create new file
+        if(!(writeAbleOffsetNum >= commitLogMessageModel.getSize())){
+            //00000000 file ->> 00000001 file
+            String newCommitLogPath = this.createNewCommitLogFile(topic, commitLogModel);
+            this.doMMap(newCommitLogPath, 0, BrokerConstants.COMMIT_LOG_DEFAULT_MMAP_SIZE);
         }
     }
 
@@ -181,4 +204,5 @@ public class MMapFileModel {
         else
             return viewed(viewedBuffer);
     }
+
 }

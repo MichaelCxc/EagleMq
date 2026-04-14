@@ -1,5 +1,7 @@
 package org.idea.eaglemq.broker.core;
 
+import org.idea.eaglemq.broker.model.CommitLogMessageModel;
+
 import java.io.IOException;
 
 public class CommitLogAppendHandler {
@@ -12,13 +14,15 @@ public class CommitLogAppendHandler {
         mMapFileModelManager.put(topicName,mMapFileModel);
     }
 
-    public void appendMsg(String topic, String content){
+    public void appendMsg(String topic, byte[] content){
         MMapFileModel mMapFileModel = mMapFileModelManager.get(topic);
         if (mMapFileModel == null){
             throw new RuntimeException("topic is invalid!");
         }
-
-        mMapFileModel.writeContent(content.getBytes());
+        CommitLogMessageModel commitLogMessageModel = new CommitLogMessageModel();
+        commitLogMessageModel.setSize(content.length);
+        commitLogMessageModel.setContent(content);
+        mMapFileModel.writeContent(commitLogMessageModel);
     }
 
     public void readMsg(String topic){
