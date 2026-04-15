@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class CommonCache {
 
@@ -30,7 +31,7 @@ public class CommonCache {
     }
 
     public static Map<String, EagleMqTopicModel> getEagleMqTopicModelMap() {
-        return eagleMqTopicModelMap;
+        return eagleMqTopicModelList.stream().collect(Collectors.toMap(EagleMqTopicModel::getTopic, item->item));
     }
 
     public static void setEagleMqTopicModelMap(Map<String, EagleMqTopicModel> eagleMqTopicModelMap) {

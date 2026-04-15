@@ -21,6 +21,7 @@ public class BrokerStartUp {
         globalPropertiesLoader.loadProperties();
         eagleMqTopicLoader = new EagleMqTopicLoader();
         eagleMqTopicLoader.loadProperties();
+        eagleMqTopicLoader.startRefreshEagleMqTopicInfoTask();
         commitLogAppendHandler = new CommitLogAppendHandler();
         List<EagleMqTopicModel> eagleMqTopicModelList = CommonCache.getEagleMqTopicModelList();
         for (EagleMqTopicModel eagleMqTopicModel : eagleMqTopicModelList){
