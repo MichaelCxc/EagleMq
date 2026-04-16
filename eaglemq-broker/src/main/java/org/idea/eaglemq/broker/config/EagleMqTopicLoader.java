@@ -40,6 +40,7 @@ public class EagleMqTopicLoader {
                 do{
                     try{
                         TimeUnit.SECONDS.sleep(BrokerConstants.DEFAULT_REFRESH_MQ_TOPIC_TIME_STEP);
+                        System.out.println("Refresh disk");
                         List<EagleMqTopicModel> eagleMqTopicModelList = CommonCache.getEagleMqTopicModelList();
                         FileContentUtil.overWriteToFile(filePath, JSON.toJSONString(eagleMqTopicModelList));
                     }catch (InterruptedException e){

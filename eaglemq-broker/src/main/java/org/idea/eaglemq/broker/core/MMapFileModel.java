@@ -61,7 +61,7 @@ public class MMapFileModel {
             throw new IllegalArgumentException("Topic in inValid: topicName is "+ topicName);
         }
         CommitLogModel commitLogModel = eagleMqTopicModel.getCommitLogModel();
-        long diff = commitLogModel.getOffsetLimit() - commitLogModel.getOffset();
+        long diff = commitLogModel.countDiff();
         String filePath = null;
         if(diff == 0){
             filePath = this.createNewCommitLogFile(topicName,commitLogModel);
@@ -69,6 +69,7 @@ public class MMapFileModel {
             filePath = CommonCache.getGlobalProperties().getEagleMqHome()
                     + BrokerConstants.BASE_STORE_PATH
                     + topicName
+                    + "/"
                     + commitLogModel.getFileName();
         }
         return filePath;
@@ -79,6 +80,7 @@ public class MMapFileModel {
         String newFilePath = CommonCache.getGlobalProperties().getEagleMqHome()
                 + BrokerConstants.BASE_STORE_PATH
                 + topicName
+                + "/"
                 + newFileName;
         File newCommitLogFile = new File(newFilePath);
         try {
@@ -126,11 +128,19 @@ public class MMapFileModel {
         //定位到最新的commitlog文件之后，写入
         //定义一个对象，专门管理各个topic的最新写入offset值，并且定时刷新到磁盘中（mmap?)
         //写入数据，offset变更，如果是高并发场景，offset是不是会被多个线程访问？
-
+        EagleMqTopicModel eagleMqTopicModel = CommonCache.getEagleMqTopicModelMap().get(topic);
+        if(eagleMqTopicModel == null){
+            throw new IllegalArgumentException("eagleMqTopicModel is null!");
+        }
+        CommitLogModel commitLogModel = eagleMqTopicModel.getCommitLogModel();
+        if(commitLogModel == null){
+            throw new IllegalArgumentException("CommitLogModel is null!");
+        }
         this.checkCommitLogHasEnabledSpace(commitLogMessageModel);
         //offset会用一个原子类AtomicLong去管理
         //线程安全问题： 线程1：111，线程2:122
         //加锁机制（锁的选择非常重要）
+
 
         // Default write to page cache
         // If hope to flush to disk, we need to adjust
@@ -141,6 +151,7 @@ public class MMapFileModel {
 
 
         mappedByteBuffer.put(commitLogMessageModel.converToBytes());
+        commitLogModel.getOffset().addAndGet(commitLogMessageModel.getSize());
         if(force){
             //强制刷盘
             mappedByteBuffer.force();
@@ -150,7 +161,7 @@ public class MMapFileModel {
     private void checkCommitLogHasEnabledSpace(CommitLogMessageModel commitLogMessageModel) throws IOException {
         EagleMqTopicModel eagleMqTopicModel = CommonCache.getEagleMqTopicModelMap().get(this.topic);
         CommitLogModel commitLogModel = eagleMqTopicModel.getCommitLogModel();
-        long writeAbleOffsetNum = commitLogModel.getOffsetLimit() - commitLogModel.getOffset();
+        long writeAbleOffsetNum = commitLogModel.countDiff();
         // Not enough space to write, need to create new file
         if(!(writeAbleOffsetNum >= commitLogMessageModel.getSize())){
             //00000000 file ->> 00000001 file

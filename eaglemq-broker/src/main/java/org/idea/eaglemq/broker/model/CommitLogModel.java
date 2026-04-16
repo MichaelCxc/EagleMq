@@ -1,6 +1,7 @@
 package org.idea.eaglemq.broker.model;
 
 
+import java.util.concurrent.atomic.AtomicLong;
 
 public class CommitLogModel {
 
@@ -17,7 +18,7 @@ public class CommitLogModel {
     /**
      * 最新commitLog文件写入数据的地址
      */
-    private Long offset;
+    private AtomicLong offset;
 
     public String getFileName() {
         return fileName;
@@ -27,11 +28,15 @@ public class CommitLogModel {
         this.fileName = fileName;
     }
 
-    public Long getOffset() {
+    public Long countDiff(){
+        return this.offsetLimit - this.offset.get();
+    }
+
+    public AtomicLong getOffset() {
         return offset;
     }
 
-    public void setOffset(Long offset) {
+    public void setOffset(AtomicLong offset) {
         this.offset = offset;
     }
 

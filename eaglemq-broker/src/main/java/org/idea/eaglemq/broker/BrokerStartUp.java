@@ -8,7 +8,9 @@ import org.idea.eaglemq.broker.core.CommitLogAppendHandler;
 import org.idea.eaglemq.broker.model.EagleMqTopicModel;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class BrokerStartUp {
 
@@ -32,11 +34,16 @@ public class BrokerStartUp {
 
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         initProperties();
         // Load property
         String topic = "order_cancel_topic";
-        //commitLogAppendHandler.appendMsg(topic, "This is a test content.");
+        for(int i = 0; i < 10; i++){
+            commitLogAppendHandler.appendMsg(topic, ("This is content" + i).getBytes());
+            System.out.println("Write data to disk");
+            TimeUnit.SECONDS.sleep(5);
+        }
+        //commitLogAppendHandler.appendMsg(topic, "This is a test content.".getBytes());
         commitLogAppendHandler.readMsg(topic);
         //Initializa
     }
