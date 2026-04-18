@@ -5,8 +5,9 @@ import org.idea.eaglemq.broker.constants.BrokerConstants;
 import org.idea.eaglemq.broker.model.CommitLogMessageModel;
 import org.idea.eaglemq.broker.model.CommitLogModel;
 import org.idea.eaglemq.broker.model.EagleMqTopicModel;
-import org.idea.eaglemq.broker.utils.ByteConvertUtils;
 import org.idea.eaglemq.broker.utils.CommitLogFileNameUtil;
+import org.idea.eaglemq.broker.utils.PutMessageLock;
+import org.idea.eaglemq.broker.utils.UnfailReentrantLock;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -18,6 +19,9 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.idea.eaglemq.broker.utils.CommitLogFileNameUtil.buildCommitLogFilePath;
 
 public class MMapFileModel {
     private File file;
@@ -25,6 +29,7 @@ public class MMapFileModel {
     private MappedByteBuffer mappedByteBuffer;
     private FileChannel fileChannel;
     private String topic;
+    private PutMessageLock putMessageLock;
 
 
     /**
@@ -38,6 +43,7 @@ public class MMapFileModel {
         String filePath = getLatestCommitLogFile(topicName);
         this.topic = topicName;
         this.doMMap(filePath,startOffset, mappedSize);
+        this.putMessageLock = new UnfailReentrantLock();
     }
 
     private void doMMap(String filePath,  int startOffset, int mappedSize) throws IOException {
@@ -64,31 +70,27 @@ public class MMapFileModel {
         long diff = commitLogModel.countDiff();
         String filePath = null;
         if(diff == 0){
-            filePath = this.createNewCommitLogFile(topicName,commitLogModel);
+            CommitLogFilePath commitLogFilePath = this.createNewCommitLogFile(topicName,commitLogModel);
+            filePath = commitLogFilePath.getFilePath();
         }else if(diff > 0){
-            filePath = CommonCache.getGlobalProperties().getEagleMqHome()
-                    + BrokerConstants.BASE_STORE_PATH
-                    + topicName
-                    + "/"
-                    + commitLogModel.getFileName();
+            filePath = CommitLogFileNameUtil.buildCommitLogFilePath(topicName, commitLogModel.getFileName());
         }
         return filePath;
     }
 
-    private String createNewCommitLogFile(String topicName, CommitLogModel commitLogModel){
+
+
+    private CommitLogFilePath createNewCommitLogFile(String topicName, CommitLogModel commitLogModel){
         String newFileName = CommitLogFileNameUtil.incrCommitLogFileName(commitLogModel.getFileName());
-        String newFilePath = CommonCache.getGlobalProperties().getEagleMqHome()
-                + BrokerConstants.BASE_STORE_PATH
-                + topicName
-                + "/"
-                + newFileName;
+        String newFilePath = buildCommitLogFilePath(topicName, newFileName);
         File newCommitLogFile = new File(newFilePath);
         try {
             newCommitLogFile.createNewFile();
         }catch (IOException ex){
             throw new RuntimeException(ex);
         }
-        return newFilePath;
+
+        return new CommitLogFilePath(newFileName,newFilePath);
     }
 
     /**
@@ -136,7 +138,7 @@ public class MMapFileModel {
         if(commitLogModel == null){
             throw new IllegalArgumentException("CommitLogModel is null!");
         }
-        this.checkCommitLogHasEnabledSpace(commitLogMessageModel);
+
         //offset会用一个原子类AtomicLong去管理
         //线程安全问题： 线程1：111，线程2:122
         //加锁机制（锁的选择非常重要）
@@ -149,13 +151,16 @@ public class MMapFileModel {
 //        byteBuffer.put(content);
 
 
-
-        mappedByteBuffer.put(commitLogMessageModel.converToBytes());
-        commitLogModel.getOffset().addAndGet(commitLogMessageModel.getSize());
+        putMessageLock.lock();;
+        this.checkCommitLogHasEnabledSpace(commitLogMessageModel);
+        byte[] writeContent = commitLogMessageModel.convertToBytes();
+        mappedByteBuffer.put(writeContent);
+        commitLogModel.getOffset().addAndGet(writeContent.length);
         if(force){
             //强制刷盘
             mappedByteBuffer.force();
         }
+        putMessageLock.unlock();
     }
 
     private void checkCommitLogHasEnabledSpace(CommitLogMessageModel commitLogMessageModel) throws IOException {
@@ -165,8 +170,11 @@ public class MMapFileModel {
         // Not enough space to write, need to create new file
         if(!(writeAbleOffsetNum >= commitLogMessageModel.getSize())){
             //00000000 file ->> 00000001 file
-            String newCommitLogPath = this.createNewCommitLogFile(topic, commitLogModel);
-            this.doMMap(newCommitLogPath, 0, BrokerConstants.COMMIT_LOG_DEFAULT_MMAP_SIZE);
+            CommitLogFilePath commitLogFilePath = this.createNewCommitLogFile(topic, commitLogModel);
+            commitLogModel.setOffsetLimit(Long.valueOf(BrokerConstants.COMMIT_LOG_DEFAULT_MMAP_SIZE));
+            commitLogModel.setOffset(new AtomicInteger(0));
+            commitLogModel.setFileName(commitLogFilePath.getFileName());
+            this.doMMap(commitLogFilePath.getFilePath(), 0, BrokerConstants.COMMIT_LOG_DEFAULT_MMAP_SIZE);
         }
     }
 
@@ -216,4 +224,29 @@ public class MMapFileModel {
             return viewed(viewedBuffer);
     }
 
+    class CommitLogFilePath{
+        private String fileName;
+        private String filePath;
+
+        public CommitLogFilePath(String fileName, String filePath) {
+            this.fileName = fileName;
+            this.filePath = filePath;
+        }
+
+        public String getFileName() {
+            return fileName;
+        }
+
+        public void setFileName(String fileName) {
+            this.fileName = fileName;
+        }
+
+        public String getFilePath() {
+            return filePath;
+        }
+
+        public void setFilePath(String filePath) {
+            this.filePath = filePath;
+        }
+    }
 }

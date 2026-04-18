@@ -30,7 +30,7 @@ public class CommitLogMessageModel {
         this.content = content;
     }
 
-    public byte[] converToBytes(){
+    public byte[] convertToBytes(){
         byte[] sizeByte = ByteConvertUtils.intToBytes(this.getSize());
         byte[] content = this.getContent();
         byte[] mergeResultByte = new byte[sizeByte.length + content.length];

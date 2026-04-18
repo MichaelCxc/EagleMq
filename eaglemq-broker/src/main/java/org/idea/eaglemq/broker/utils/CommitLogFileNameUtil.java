@@ -1,5 +1,8 @@
 package org.idea.eaglemq.broker.utils;
 
+import org.idea.eaglemq.broker.cache.CommonCache;
+import org.idea.eaglemq.broker.constants.BrokerConstants;
+
 public class CommitLogFileNameUtil {
 
 
@@ -9,6 +12,20 @@ public class CommitLogFileNameUtil {
      */
     public static String buildFirstCommitLogName(){
         return "00000000";
+    }
+
+    /**
+     *
+     * @param topicName
+     * @param commitLogFileName
+     * @return
+     */
+    public static String buildCommitLogFilePath(String topicName, String commitLogFileName){
+        return CommonCache.getGlobalProperties().getEagleMqHome()
+                + BrokerConstants.BASE_STORE_PATH
+                + topicName
+                + "/"
+                + commitLogFileName;
     }
 
     /**
